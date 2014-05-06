@@ -168,18 +168,6 @@ static void pm8xxx_vib_update(struct work_struct *work)
 	pm8xxx_vib_set_off(vib);
 }
 
-int vibrate(int time)
-{
-    pm8xxx_vib_enable(&vib_dev->timed_dev, time);
-    return 0;
-}
-
-int vibrate(int time)
-{
-    pm8xxx_vib_enable(&vib_dev->timed_dev, time);
-    return 0;
-}
-
 static int pm8xxx_vib_get_time(struct timed_output_dev *dev)
 {
 	struct pm8xxx_vib_pwm *vib = container_of(dev, struct pm8xxx_vib_pwm,
