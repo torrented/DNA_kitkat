@@ -296,10 +296,10 @@ static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 	if (l2w_switch == 1)
 		break_longtap_count = 1;
 
-	if (wakesleep_vib) {
-	        vibrate(vib_strength);
-		wakesleep_vib = 0;
-	}
+//	if (wakesleep_vib) {
+//	        vibrate(vib_strength);
+//		wakesleep_vib = 0;
+//	}
 
 	if (!mutex_trylock(&pwrkeyworklock))
 		return;
@@ -395,7 +395,7 @@ static void logo2wake_longtap_count(struct work_struct * logo2wake_longtap_count
 			if (gestures_switch && scr_suspended) {
 				report_gesture(6);
 			} else if (l2w_switch) {
-				vibrate(vib_strength);
+				//vibrate(vib_strength);
 				input_event(sweep2wake_pwrdev, EV_KEY, KEY_POWER, 1);
 				input_sync(sweep2wake_pwrdev);
 				msleep(100);
