@@ -40,6 +40,7 @@ modules.builtin
 #
 kerneltools-build-config
 /hate
+/dna
 
 #
 # Top-level generic files
