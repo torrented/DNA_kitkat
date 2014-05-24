@@ -35,10 +35,6 @@
 #ifdef CONFIG_PERFLOCK
 #include <mach/perflock.h>
 #endif
-
-#ifdef CONFIG_MSM_CPU_FREQ_SET_DEFAULT_MIN_MAX
-static DEFINE_PER_CPU(bool, set_default_min_max);
-#endif
  
 #ifdef CONFIG_SMP
 struct cpufreq_work_struct {
@@ -80,35 +76,6 @@ static int override_cpu;
 
 
 uint32_t cmdline_maxkhz = 1512000, cmdline_minkhz = 162000;
-
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
-char cmdline_gov[16] = "conservative";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_USERSPACE
-char cmdline_gov[16] = "userspace";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_POWERSAVE
-char cmdline_gov[16] = "powersave";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PRESERVATIVE
-char cmdline_gov[16] = "preservative";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
-char cmdline_gov[16] = "ondemand";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE
-char cmdline_gov[16] = "performance";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
-char cmdline_gov[16] = "intellidemand";
-#endif
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTELLIACTIVE
-char cmdline_gov[16] = "intelliactive";
-#endif
-
-/* only override the governor 2 times, when
- * initially bringing up cpufreq on the cpus */
-int cmdline_gov_cnt = CONFIG_NR_CPUS;
 
 static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
 {
@@ -177,20 +144,9 @@ static int __init cpufreq_read_minkhz_cmdline(char *minkhz)
         return 1;
 }
 __setup("minkhz=", cpufreq_read_minkhz_cmdline);
-
-static int __init cpufreq_read_gov_cmdline(char *gov)
-{
-	if (gov) {
-		strcpy(cmdline_gov, gov);
-		printk(KERN_INFO "[cmdline_gov]: Governor will be set to '%s'", cmdline_gov);
-	} else {
-		printk(KERN_INFO "[cmdline_gov]: No input found.");
-	}
-	return 1;
-}
-__setup("gov=", cpufreq_read_gov_cmdline);
 /* end cmdline_khz */
 #endif
+
 static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 {
 	int ret = 0;
@@ -408,10 +364,6 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	struct cpufreq_work_struct *cpu_work = NULL;
 #endif
 
-#ifdef CONFIG_MSM_CPU_FREQ_SET_DEFAULT_MIN_MAX
-	bool *have_set_default_min_max = &per_cpu(set_default_min_max, policy->cpu);
-#endif
-
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (table == NULL)
 		return -ENODEV;
@@ -428,15 +380,6 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 		policy->cpuinfo.max_freq = cmdline_maxkhz;
 #endif
 	}
-#ifdef CONFIG_MSM_CPU_FREQ_SET_DEFAULT_MIN_MAX
-	if (! *have_set_default_min_max) {
-		*have_set_default_min_max = true;
-		pr_info("cpufreq: setting default min to %d", CONFIG_MSM_CPU_FREQ_DEFAULT_MIN);
-		policy->min = CONFIG_MSM_CPU_FREQ_DEFAULT_MIN;
-		pr_info("cpufreq: setting default max to %d", CONFIG_MSM_CPU_FREQ_DEFAULT_MAX);
-		policy->max = CONFIG_MSM_CPU_FREQ_DEFAULT_MAX;
-	}
-#endif
 
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
 		policy->min = CONFIG_MSM_CPU_FREQ_MIN;
@@ -481,44 +424,6 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 #endif
 	return 0;
 }
-
-
-#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
-extern bool lmf_screen_state;
-#endif
-
-static void msm_cpu_early_suspend(struct early_suspend *h)
-{
-#ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
-	int cpu = 0;
-
-	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
-		lmf_screen_state = false;
-		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
-	}
-#endif
-}
-
-static void msm_cpu_late_resume(struct early_suspend *h)
-{
-#ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
-	int cpu = 0;
-
-	for_each_possible_cpu(cpu) {
-
-		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
-		lmf_screen_state = true;
-		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
-	}
-#endif
-}
-
-static struct early_suspend msm_cpu_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	.suspend = msm_cpu_early_suspend,
-	.resume = msm_cpu_late_resume,
-};
 
 static int msm_cpufreq_suspend(void)
 {
@@ -593,7 +498,6 @@ static int __init msm_cpufreq_register(void)
 #endif
 
 	register_pm_notifier(&msm_cpufreq_pm_notifier);
-	register_early_suspend(&msm_cpu_early_suspend_handler);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 
