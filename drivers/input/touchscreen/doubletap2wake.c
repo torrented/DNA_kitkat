@@ -32,6 +32,9 @@
 #ifdef CONFIG_POCKET_DETECT
 #include <linux/input/pocket_detect.h>
 #endif
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_GESTURES
+#include <linux/input/motionwakegesture.h>
+#endif
 #ifndef CONFIG_HAS_EARLYSUSPEND
 #include <linux/lcd_notify.h>
 #else
@@ -57,12 +60,12 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
 /* Tuneables */
-#define DT2W_DEBUG			0
+#define DT2W_DEBUG		0
 #define DT2W_DEFAULT		0
 
 #define DT2W_PWRKEY_DUR		50
 #define DT2W_FEATHER		200
-#define DT2W_TIME			250
+#define DT2W_TIME		250
 
 /* Resources */
 int dt2w_switch = DT2W_DEFAULT;
@@ -174,10 +177,18 @@ static void detect_doubletap2wake(int x, int y, bool st)
 			new_touch(x, y);
 		}
 		if ((touch_nr > 1)) {
-			pr_info(LOGTAG"ON\n");
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_GESTURES
+			if (gesture_switch > 0) {
+				report_gesture(5);
+			} else {
+#endif
+				pr_info(LOGTAG"ON\n");
+				doubletap2wake_pwrtrigger();
+				doubletap2wake_reset();
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_GESTURES
+			}
+#endif
 			exec_count = false;
-			doubletap2wake_pwrtrigger();
-			doubletap2wake_reset();
 		}
 	}
 }
